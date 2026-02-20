@@ -218,12 +218,10 @@
 
     <!-- TIMER: Espera email -->
     <intermediateCatchEvent id="Timer_EsperaEmail"
-                            name="Esperar recepcion&#10;de codigo (max 30 min)">
+                            name="Esperar recepcion&#10;de codigo de verificacion">
       <incoming>SF_07</incoming>
       <outgoing>SF_08</outgoing>
-      <timerEventDefinition id="TED_Email">
-        <timeDuration xsi:type="tFormalExpression">PT30M</timeDuration>
-      </timerEventDefinition>
+      <timerEventDefinition id="TED_Email"/>
     </intermediateCatchEvent>
 
     <!-- T04: Ingresar codigo -->
