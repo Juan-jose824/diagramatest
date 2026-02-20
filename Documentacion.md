@@ -1,95 +1,46 @@
-Documentación del Cambio
-1️⃣ Descripción del Error
+# Reporte de Ingeniería: Ajustes y Optimización de Procesos
+## Proyecto: Sistema de Credencialización Digital Jalisco (v3.0)
 
-En el evento intermedio de tipo temporizador (intermediateCatchEvent) se configuró una duración explícita de 30 minutos:
+---
 
-<timerEventDefinition id="TED_Email">
-  <timeDuration xsi:type="tFormalExpression">PT30M</timeDuration>
-</timerEventDefinition>
+## 1. Identificación del Documento
+* **Asunto:** Corrección de flujo lógico y optimización de diagramación BPMN.
+* **Fecha de Modificación:** 20 de febrero de 2026.
+* **Referencia Normativa:** Manual de Usuario Operativo FSW2023 (Cignuz/Secretaría de Administración).
+* **Archivo de Proceso:** `credencializacion_completo.bpmn`
 
-❌ Problema detectado
+---
 
-El modelo de proceso no especifica un tiempo máximo de espera para la recepción del código de verificación.
-Por lo tanto:
+## 2. Antecedentes y Contexto
+Tras una auditoría técnica del modelo v2.0 comparado con el **Manual de Usuario FSW2023**, se identificó una restricción de tiempo arbitraria en el nodo de validación de identidad. El manual establece que el ciudadano debe recibir un código de 6 dígitos para activar su cuenta, pero no estipula un límite de caducidad de 30 minutos, por lo que se procedió a la reingeniería del proceso para alinearlo a la normativa oficial.
 
-No debe configurarse un timeDuration
+---
 
-No debe limitarse el tiempo a PT30M
+## 3. Registro de Errores y Hallazgos (Debilidades v2.0)
 
-El temporizador queda mal definido desde el punto de vista funcional
+### **3.1. Error de Regla de Negocio (Lógica de Proceso)**
+* **Hallazgo:** Configuración de un temporizador rígido de 30 minutos (`PT30M`) en el evento de recepción de correo.
+* **Evidencia Técnica:** `<timeDuration xsi:type="tFormalExpression">PT30M</timeDuration>`.
+* **Impacto:** Según el manual (pág. 9), el sistema depende del remitente **IDJalisco**. Si este servicio presenta latencia, el temporizador bloqueaba el trámite, obligando al usuario a reiniciar el registro y generando saturación innecesaria en la base de datos de pre-registros.
 
-El error es conceptual (de modelado), no sintáctico.
+### **3.2. Deficiencia en la Interoperabilidad BPMN**
+* **Hallazgo:** Coordenadas de flujo amontonadas y falta de espaciado en los carriles de "Brigadista" y "Sistema".
+* **Consecuencia:** Errores de renderizado y congelamiento en **Bizagi Modeler**.
 
-2️⃣ Causa Raíz
+---
 
-El proceso original únicamente indica:
+## 4. Diagramación del Flujo Correcto (Propuesta v3.0)
 
-“Esperar recepción de código de verificación”
+El nuevo diseño garantiza que el ciudadano pueda completar la verificación incluso si el correo electrónico tarda en llegar, permitiendo el uso de la función **"Reenviar código"** que menciona el manual.
 
-No existe regla de negocio que indique:
+### **4.1. Esquema Lógico de Verificación (BPMN Flow)**
 
-30 minutos
-
-15 minutos
-
-Tiempo máximo alguno
-
-Al no existir restricción temporal definida, no debe modelarse un temporizador con duración fija.
-
-3️⃣ Corrección Aplicada
-
-Se eliminó la definición de duración (timeDuration) del evento temporizador.
-
-<!-- TIMER: Espera email -->
-<intermediateCatchEvent id="Timer_EsperaEmail"
-                        name="Esperar recepcion&#10;de codigo de verificacion">
-  <incoming>SF_07</incoming>
-  <outgoing>SF_08</outgoing>
-  <timerEventDefinition id="TED_Email"/>
-</intermediateCatchEvent>
-
-✔ Cambios realizados
-
-Se eliminó <timeDuration xsi:type="tFormalExpression">PT30M</timeDuration>
-
-Se corrigió el nombre del evento
-
-Se dejó el timerEventDefinition sin duración explícita
-
-📊 Diagrama del Proceso Correcto
-
-El flujo correcto debe representar:
-
-Usuario solicita código
-
-Sistema envía código
-
-Se espera recepción del código (sin límite de tiempo definido)
-
-Usuario ingresa código
-
-Validación
-
-🔵 Representación BPMN Correcta
-
-[Inicio]
-    ↓
-[Enviar código de verificación]
-    ↓
-( Evento Intermedio - Esperar recepción de código )
-    ↓
-[Usuario ingresa código]
-    ↓
-[Validar código]
-    ↓
-[Fin]
-
-🔎 Estructura Conceptual BPMN
-
-El evento debe ser:
-
-intermediateCatchEvent
-
-Tipo: timerEventDefinition
-
-Pero sin definir timeDuration si no existe regla de negocio
+```mermaid
+graph TD
+    A[Sistema envía código de 6 dígitos] --> B(Esperar recepción de correo)
+    B --> C{¿Código recibido?}
+    C -- NO / Reenviar --> B
+    C -- SÍ --> D[Usuario ingresa código en el portal]
+    D --> E[Validar integridad del código]
+    E -- Válido --> F[Continuar a Verificación Biométrica]
+    E -- Inválido --> D
