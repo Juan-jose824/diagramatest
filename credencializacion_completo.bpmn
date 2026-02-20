@@ -1,0 +1,1308 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions
+  xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+  xsi:schemaLocation="http://www.omg.org/spec/BPMN/20100524/MODEL
+                      http://www.omg.org/spec/BPMN/20100524/MODEL/BPMN20.xsd"
+  id="Definitions_Credencializacion"
+  targetNamespace="http://cignuz.com/credencializacion"
+  exporter="Claude BPMN Generator"
+  exporterVersion="2.0">
+
+  <!-- ═══════════════════════════════════════════════════
+       ERROR DEFINITIONS
+  ═══════════════════════════════════════════════════ -->
+  <error id="Error_CURP_Invalida"    name="CURP Invalida o Duplicada"       errorCode="ERR_CURP_001"/>
+  <error id="Error_Biometria_Fallo"  name="Verificacion Biometrica Fallida" errorCode="ERR_BIO_001"/>
+
+  <!-- ═══════════════════════════════════════════════════
+       MESSAGE DEFINITIONS
+  ═══════════════════════════════════════════════════ -->
+  <message id="Msg_CodigoVerificacion" name="CodigoVerificacionEmail"/>
+
+  <!-- ═══════════════════════════════════════════════════
+       COLLABORATION
+  ═══════════════════════════════════════════════════ -->
+  <collaboration id="Collab_Credencializacion">
+    <participant
+      id="Pool_Credencializacion"
+      name="Sistema de Credencializacion Digital &#8212; Seguro Salud Jalisco"
+      processRef="Proc_Credencializacion"/>
+  </collaboration>
+
+  <!-- ═══════════════════════════════════════════════════
+       MAIN PROCESS
+  ═══════════════════════════════════════════════════ -->
+  <process
+    id="Proc_Credencializacion"
+    name="Credencializacion Digital Seguro Salud Jalisco"
+    isExecutable="true"
+    camunda:historyTimeToLive="P30D">
+
+    <!-- ─────────────────────────────────────────────
+         LANE SET
+    ───────────────────────────────────────────── -->
+    <laneSet id="LaneSet_1">
+
+      <!-- LANE: CIUDADANO -->
+      <lane id="Lane_Ciudadano" name="Ciudadano (Portal de Credencializacion)">
+        <flowNodeRef>Start_Ciudadano</flowNodeRef>
+        <flowNodeRef>Task_IngresarCURP</flowNodeRef>
+        <flowNodeRef>Task_ConfirmarDatos</flowNodeRef>
+        <flowNodeRef>Task_AceptarPrivacidad</flowNodeRef>
+        <flowNodeRef>Task_IngresarCodigo</flowNodeRef>
+        <flowNodeRef>Task_CrearContrasena</flowNodeRef>
+        <flowNodeRef>Task_IniciarSesion</flowNodeRef>
+        <flowNodeRef>Task_ActualizarContacto</flowNodeRef>
+        <flowNodeRef>Task_CapturarINE</flowNodeRef>
+        <flowNodeRef>Task_CapturarRostro</flowNodeRef>
+        <flowNodeRef>Task_DescargarCredencial</flowNodeRef>
+        <flowNodeRef>GW_MasDependientes</flowNodeRef>
+        <flowNodeRef>Task_IngresarCURPDependiente</flowNodeRef>
+        <flowNodeRef>Task_ConfirmarDatosDependiente</flowNodeRef>
+        <flowNodeRef>Task_CerrarSesionCiudadano</flowNodeRef>
+        <flowNodeRef>End_CredencialOK</flowNodeRef>
+      </lane>
+
+      <!-- LANE: SISTEMA -->
+      <lane id="Lane_Sistema" name="Sistema / Plataforma (IDJalisco + Motor Biometrico)">
+        <flowNodeRef>Task_ValidarCURP</flowNodeRef>
+        <flowNodeRef>GW_CURPValida</flowNodeRef>
+        <flowNodeRef>End_ErrorCURP</flowNodeRef>
+        <flowNodeRef>Task_EnviarEmail</flowNodeRef>
+        <flowNodeRef>Timer_EsperaEmail</flowNodeRef>
+        <flowNodeRef>Task_ValidarCodigo</flowNodeRef>
+        <flowNodeRef>GW_CodigoValido</flowNodeRef>
+        <flowNodeRef>Task_ProcesarBiometria</flowNodeRef>
+        <flowNodeRef>GW_BiometriaOK</flowNodeRef>
+        <flowNodeRef>End_ErrorBiometria</flowNodeRef>
+        <flowNodeRef>Task_GenerarCredencial</flowNodeRef>
+        <flowNodeRef>Task_ValidarCURPDep</flowNodeRef>
+        <flowNodeRef>GW_CURPDepValida</flowNodeRef>
+        <flowNodeRef>Task_GenerarCredencialDep</flowNodeRef>
+      </lane>
+
+      <!-- LANE: BRIGADISTA -->
+      <lane id="Lane_Brigadista" name="Brigadista (Herramienta de Campo)">
+        <flowNodeRef>Start_Brigadista</flowNodeRef>
+        <flowNodeRef>Task_BrigIniciarSesion</flowNodeRef>
+        <flowNodeRef>Task_BrigIngresarCURP</flowNodeRef>
+        <flowNodeRef>Task_BrigConfirmarDatos</flowNodeRef>
+        <flowNodeRef>Task_BrigGuardarPreregistro</flowNodeRef>
+        <flowNodeRef>Task_BrigCerrarSesion</flowNodeRef>
+        <flowNodeRef>End_BrigOK</flowNodeRef>
+      </lane>
+
+      <!-- LANE: COORDINADOR REGIONAL -->
+      <lane id="Lane_CoordRegional" name="Coordinador Regional (Herramienta Brigadistas)">
+        <flowNodeRef>Start_CoordRegional</flowNodeRef>
+        <flowNodeRef>Task_CRIniciarSesion</flowNodeRef>
+        <flowNodeRef>GW_CRAcciones</flowNodeRef>
+        <flowNodeRef>Task_CRGestionarUsuarios</flowNodeRef>
+        <flowNodeRef>Task_CRAdminRegistros</flowNodeRef>
+        <flowNodeRef>Task_CREditarPreregistro</flowNodeRef>
+        <flowNodeRef>Task_CRCambiarRegion</flowNodeRef>
+        <flowNodeRef>Task_CRCerrarSesion</flowNodeRef>
+        <flowNodeRef>End_CoordRegionalOK</flowNodeRef>
+      </lane>
+
+      <!-- LANE: COORDINADOR ESTATAL -->
+      <lane id="Lane_CoordEstatal" name="Coordinador Estatal (Herramienta Brigadistas)">
+        <flowNodeRef>Start_CoordEstatal</flowNodeRef>
+        <flowNodeRef>Task_CEIniciarSesion</flowNodeRef>
+        <flowNodeRef>GW_CEAcciones</flowNodeRef>
+        <flowNodeRef>Task_CEGestionarUsuarios</flowNodeRef>
+        <flowNodeRef>Task_CEAdminTodosRegistros</flowNodeRef>
+        <flowNodeRef>Task_CEAsignarRegion</flowNodeRef>
+        <flowNodeRef>Task_CECerrarSesion</flowNodeRef>
+        <flowNodeRef>End_CoordEstatalOK</flowNodeRef>
+      </lane>
+
+    </laneSet>
+
+    <!-- ═══════════════════════════════════════════════════
+         ████  LANE CIUDADANO  ████
+    ═══════════════════════════════════════════════════ -->
+
+    <!-- START -->
+    <startEvent id="Start_Ciudadano" name="Ciudadano solicita&#10;credencial digital">
+      <outgoing>SF_01</outgoing>
+    </startEvent>
+
+    <!-- T01 -->
+    <userTask id="Task_IngresarCURP"
+              name="Ingresar CURP&#10;y correo electronico"
+              camunda:assignee="ciudadano">
+      <documentation>
+        El ciudadano accede al portal credencial.seguro.jalisco.gob.mx,
+        selecciona Quiero crear mi cuenta e ingresa su CURP y correo
+        electronico (confirmado dos veces). Puede consultar su CURP si
+        no la recuerda. RN-01, RN-02.
+      </documentation>
+      <incoming>SF_01</incoming>
+      <outgoing>SF_02</outgoing>
+    </userTask>
+
+    <!-- S01: Validar CURP (Sistema) -->
+    <serviceTask id="Task_ValidarCURP"
+                 name="Validar CURP en sistema&#10;(RENAPO / BD local)"
+                 camunda:type="external"
+                 camunda:topic="validar-curp">
+      <documentation>
+        El sistema verifica que la CURP tenga formato valido y que no
+        este asociada a una credencial activa en la base de datos.
+        Si ya existe credencial ligada, se muestra mensaje informativo.
+        RN-01.
+      </documentation>
+      <incoming>SF_02</incoming>
+      <outgoing>SF_03</outgoing>
+    </serviceTask>
+
+    <!-- GW_CURP -->
+    <exclusiveGateway id="GW_CURPValida" name="CURP valida&#10;y disponible?">
+      <incoming>SF_03</incoming>
+      <outgoing>SF_04_OK</outgoing>
+      <outgoing>SF_04_ERR</outgoing>
+    </exclusiveGateway>
+
+    <!-- ERROR END: CURP invalida -->
+    <endEvent id="End_ErrorCURP" name="ERROR: CURP invalida&#10;o ya registrada">
+      <incoming>SF_04_ERR</incoming>
+      <errorEventDefinition id="EED_CURP" errorRef="Error_CURP_Invalida"/>
+    </endEvent>
+
+    <!-- T02: Confirmar datos -->
+    <userTask id="Task_ConfirmarDatos"
+              name="Confirmar datos personales&#10;(nombre, fecha nac., estado)"
+              camunda:assignee="ciudadano">
+      <documentation>
+        El sistema muestra los datos vinculados a la CURP (nombre,
+        apellidos, fecha de nacimiento, estado, sexo, edad). El ciudadano
+        verifica y completa campos faltantes. Los opcionales no bloquean.
+      </documentation>
+      <incoming>SF_04_OK</incoming>
+      <outgoing>SF_05</outgoing>
+    </userTask>
+
+    <!-- T03: Aviso privacidad -->
+    <userTask id="Task_AceptarPrivacidad"
+              name="Aceptar aviso de privacidad&#10;y confirmar sin seguridad social"
+              camunda:assignee="ciudadano">
+      <documentation>
+        El ciudadano acepta el Aviso de Privacidad y Uso de Datos.
+        Debe confirmar que NO cuenta con seguridad social (IMSS, ISSSTE,
+        etc.). De lo contrario la credencial puede perder validez. RN-02.
+      </documentation>
+      <incoming>SF_05</incoming>
+      <outgoing>SF_06</outgoing>
+    </userTask>
+
+    <!-- S02: Enviar email -->
+    <serviceTask id="Task_EnviarEmail"
+                 name="Enviar codigo de verificacion&#10;por correo (IDJalisco)"
+                 camunda:type="external"
+                 camunda:topic="enviar-email-verificacion">
+      <documentation>
+        El sistema envia un codigo de 6 digitos al correo registrado
+        a traves de IDJalisco. El ciudadano puede solicitar reenvio
+        si no lo recibe. RN-03.
+      </documentation>
+      <incoming>SF_06</incoming>
+      <incoming>SF_Loop_Reenviar</incoming>
+      <outgoing>SF_07</outgoing>
+    </serviceTask>
+
+    <!-- TIMER: Espera email -->
+    <intermediateCatchEvent id="Timer_EsperaEmail"
+                            name="Esperar recepcion&#10;de codigo (max 30 min)">
+      <incoming>SF_07</incoming>
+      <outgoing>SF_08</outgoing>
+      <timerEventDefinition id="TED_Email">
+        <timeDuration xsi:type="tFormalExpression">PT30M</timeDuration>
+      </timerEventDefinition>
+    </intermediateCatchEvent>
+
+    <!-- T04: Ingresar codigo -->
+    <userTask id="Task_IngresarCodigo"
+              name="Ingresar codigo de&#10;verificacion (6 digitos)"
+              camunda:assignee="ciudadano">
+      <documentation>
+        El ciudadano revisa su correo (mensaje de IDJalisco para el
+        Seguro de Salud Jalisco), copia o memoriza el codigo de 6
+        digitos e ingresa el codigo en el portal. Puede reenviar si
+        es incorrecto. RN-03.
+      </documentation>
+      <incoming>SF_08</incoming>
+      <outgoing>SF_09</outgoing>
+    </userTask>
+
+    <!-- S03: Validar codigo -->
+    <serviceTask id="Task_ValidarCodigo"
+                 name="Validar codigo de&#10;verificacion ingresado"
+                 camunda:type="external"
+                 camunda:topic="validar-codigo">
+      <documentation>
+        El sistema compara el codigo ingresado contra el generado para
+        la sesion de ese correo. Resultado: valido o invalido.
+      </documentation>
+      <incoming>SF_09</incoming>
+      <outgoing>SF_10</outgoing>
+    </serviceTask>
+
+    <!-- GW_CODIGO -->
+    <exclusiveGateway id="GW_CodigoValido" name="Codigo de verificacion&#10;correcto?">
+      <incoming>SF_10</incoming>
+      <outgoing>SF_11_OK</outgoing>
+      <outgoing>SF_11_Reenviar</outgoing>
+    </exclusiveGateway>
+
+    <!-- Loop reenvio -->
+    <sequenceFlow id="SF_Loop_Reenviar"
+                  name="No — reenviar codigo"
+                  sourceRef="GW_CodigoValido"
+                  targetRef="Task_EnviarEmail">
+      <conditionExpression xsi:type="tFormalExpression">${codigoValido == false}</conditionExpression>
+    </sequenceFlow>
+
+    <!-- T05: Crear contrasena -->
+    <userTask id="Task_CrearContrasena"
+              name="Crear contrasena&#10;de acceso al portal"
+              camunda:assignee="ciudadano">
+      <documentation>
+        El ciudadano establece una nueva contrasena. Debe coincidir en
+        los dos campos. Al confirmar, la cuenta queda verificada y activa.
+        Esta misma pantalla se usa para recuperacion de contrasena.
+      </documentation>
+      <incoming>SF_11_OK</incoming>
+      <outgoing>SF_12</outgoing>
+    </userTask>
+
+    <!-- T06: Iniciar sesion -->
+    <userTask id="Task_IniciarSesion"
+              name="Iniciar sesion en&#10;el portal de credencializacion"
+              camunda:assignee="ciudadano">
+      <documentation>
+        El ciudadano ingresa su correo electronico y contrasena en el
+        formulario de acceso del portal y presiona Ingresar.
+        Tambien aplica cuando el preregistro fue creado por brigadista
+        y el ciudadano usa el flujo de recuperacion de contrasena.
+      </documentation>
+      <incoming>SF_12</incoming>
+      <incoming>SF_BrigDerivaCiudadano</incoming>
+      <outgoing>SF_13</outgoing>
+    </userTask>
+
+    <!-- T07: Actualizar datos contacto -->
+    <userTask id="Task_ActualizarContacto"
+              name="Actualizar datos de contacto&#10;(celular, domicilio, colonia)"
+              camunda:assignee="ciudadano">
+      <documentation>
+        Desde el modulo Mis Credenciales, el ciudadano completa la
+        informacion obligatoria de contacto: numero de celular, estado,
+        municipio, colonia o localidad, calle, numero exterior,
+        numero interior y referencias. Campos con residencia
+        en extranjero, foraneo o migrante son opcionales.
+      </documentation>
+      <incoming>SF_13</incoming>
+      <outgoing>SF_14</outgoing>
+    </userTask>
+
+    <!-- T08: Capturar INE -->
+    <userTask id="Task_CapturarINE"
+              name="Capturar foto de INE /&#10;identificacion oficial"
+              camunda:assignee="ciudadano">
+      <documentation>
+        FASE BIOMETRICA - Paso 1/2.
+        El ciudadano captura con la camara del dispositivo su INE
+        (centrada en el recuadro) o la selecciona desde galeria.
+        Verifica que la imagen sea nitida. Puede retomar si no cumple
+        requisitos de calidad. Confirma con el boton. RN-04.
+      </documentation>
+      <incoming>SF_14</incoming>
+      <outgoing>SF_15</outgoing>
+    </userTask>
+
+    <!-- T09: Capturar rostro -->
+    <userTask id="Task_CapturarRostro"
+              name="Capturar foto de rostro&#10;(selfie biometrica)"
+              camunda:assignee="ciudadano">
+      <documentation>
+        FASE BIOMETRICA - Paso 2/2.
+        El ciudadano centra su rostro en el ovalo que aparece en
+        pantalla y captura la imagen o la selecciona desde galeria.
+        Verifica nitidez. Puede retomar. Confirma con boton. RN-04.
+      </documentation>
+      <incoming>SF_15</incoming>
+      <outgoing>SF_16</outgoing>
+    </userTask>
+
+    <!-- S04: Procesar biometria -->
+    <serviceTask id="Task_ProcesarBiometria"
+                 name="Procesar y comparar&#10;datos biometricos con INE"
+                 camunda:type="external"
+                 camunda:topic="procesar-biometria">
+      <documentation>
+        El sistema extrae la plantilla biometrica facial del rostro
+        capturado y la compara con la foto almacenada en la INE
+        proporcionada. Verifica que la persona sea quien dice ser.
+        Resultado: exitoso o fallido. RN-04.
+      </documentation>
+      <incoming>SF_16</incoming>
+      <outgoing>SF_17</outgoing>
+    </serviceTask>
+
+    <!-- GW_BIOMETRIA -->
+    <exclusiveGateway id="GW_BiometriaOK" name="Verificacion&#10;biometrica exitosa?">
+      <incoming>SF_17</incoming>
+      <outgoing>SF_18_OK</outgoing>
+      <outgoing>SF_18_ERR</outgoing>
+    </exclusiveGateway>
+
+    <!-- ERROR END: Biometria fallida -->
+    <endEvent id="End_ErrorBiometria" name="ERROR: Verificacion&#10;biometrica fallida">
+      <incoming>SF_18_ERR</incoming>
+      <errorEventDefinition id="EED_Bio" errorRef="Error_Biometria_Fallo"/>
+    </endEvent>
+
+    <!-- S05: Generar credencial -->
+    <serviceTask id="Task_GenerarCredencial"
+                 name="Generar credencial digital&#10;(foto, nombre, CURP, QR)"
+                 camunda:type="external"
+                 camunda:topic="generar-credencial">
+      <documentation>
+        El sistema genera la credencial digital con: foto verificada,
+        nombre completo, CURP, folio de credencial y codigo QR
+        vinculado a los servicios de salud del Gobierno de Jalisco.
+        La credencial permite acceder a unidades de salud del estado.
+        RN-09.
+      </documentation>
+      <incoming>SF_18_OK</incoming>
+      <outgoing>SF_19</outgoing>
+    </serviceTask>
+
+    <!-- T10: Descargar credencial -->
+    <userTask id="Task_DescargarCredencial"
+              name="Descargar credencial&#10;(PDF o Apple Wallet)"
+              camunda:assignee="ciudadano">
+      <documentation>
+        El ciudadano puede descargar su credencial digital en formato
+        PDF o bien agregarla directamente a Apple Wallet en dispositivos
+        iOS. RN-09.
+      </documentation>
+      <incoming>SF_19</incoming>
+      <outgoing>SF_20</outgoing>
+    </userTask>
+
+    <!-- GW_DEPENDIENTES -->
+    <exclusiveGateway id="GW_MasDependientes" name="Desea agregar&#10;dependientes?">
+      <incoming>SF_20</incoming>
+      <incoming>SF_DepLoop</incoming>
+      <outgoing>SF_21_SI</outgoing>
+      <outgoing>SF_21_NO</outgoing>
+    </exclusiveGateway>
+
+    <!-- T11: Ingresar CURP dependiente -->
+    <userTask id="Task_IngresarCURPDependiente"
+              name="Ingresar CURP del&#10;dependiente (Mis Dependientes)"
+              camunda:assignee="ciudadano">
+      <documentation>
+        Desde el modulo Mis Dependientes, el ciudadano agrega un
+        dependiente (menor de edad, adulto mayor) ingresando su CURP.
+        El titular debe tener credencial activa para poder hacer esto.
+        RN-05.
+      </documentation>
+      <incoming>SF_21_SI</incoming>
+      <outgoing>SF_22</outgoing>
+    </userTask>
+
+    <!-- S06: Validar CURP dependiente -->
+    <serviceTask id="Task_ValidarCURPDep"
+                 name="Validar CURP del dependiente&#10;en sistema"
+                 camunda:type="external"
+                 camunda:topic="validar-curp-dependiente">
+      <documentation>
+        El sistema verifica la CURP del dependiente: valida el formato
+        y que no tenga ya una credencial activa asociada.
+      </documentation>
+      <incoming>SF_22</incoming>
+      <outgoing>SF_23</outgoing>
+    </serviceTask>
+
+    <!-- GW_CURP_DEP -->
+    <exclusiveGateway id="GW_CURPDepValida" name="CURP dependiente&#10;valida?">
+      <incoming>SF_23</incoming>
+      <outgoing>SF_24_OK</outgoing>
+      <outgoing>SF_24_ERR_Loop</outgoing>
+    </exclusiveGateway>
+
+    <!-- T12: Confirmar datos dependiente -->
+    <userTask id="Task_ConfirmarDatosDependiente"
+              name="Confirmar datos y parentesco&#10;del dependiente"
+              camunda:assignee="ciudadano">
+      <documentation>
+        El ciudadano confirma los datos del dependiente (nombre,
+        fecha nacimiento, estado, sexo, edad) y completa el campo
+        de parentesco (padre, madre, hijo/a, etc.).
+        Acepta aviso de privacidad y confirma sin seguridad social.
+      </documentation>
+      <incoming>SF_24_OK</incoming>
+      <outgoing>SF_25</outgoing>
+    </userTask>
+
+    <!-- S07: Generar credencial dependiente -->
+    <serviceTask id="Task_GenerarCredencialDep"
+                 name="Generar credencial digital&#10;del dependiente"
+                 camunda:type="external"
+                 camunda:topic="generar-credencial-dependiente">
+      <documentation>
+        El sistema genera la credencial digital del dependiente.
+        Puede descargarse en PDF o agregarse a Apple Wallet.
+        El sistema vuelve al gateway para preguntar si hay mas
+        dependientes. RN-05, RN-09.
+      </documentation>
+      <incoming>SF_25</incoming>
+      <outgoing>SF_DepLoop</outgoing>
+    </serviceTask>
+
+    <!-- T13: Cerrar sesion ciudadano -->
+    <userTask id="Task_CerrarSesionCiudadano"
+              name="Cerrar sesion en&#10;el portal"
+              camunda:assignee="ciudadano">
+      <documentation>
+        El ciudadano cierra su sesion activa en el portal de
+        credencializacion presionando el icono de cierre de sesion.
+      </documentation>
+      <incoming>SF_21_NO</incoming>
+      <outgoing>SF_26</outgoing>
+    </userTask>
+
+    <!-- END OK -->
+    <endEvent id="End_CredencialOK" name="Credencial digital&#10;generada exitosamente">
+      <incoming>SF_26</incoming>
+    </endEvent>
+
+
+    <!-- ═══════════════════════════════════════════════════
+         ████  LANE BRIGADISTA  ████
+    ═══════════════════════════════════════════════════ -->
+
+    <startEvent id="Start_Brigadista" name="Brigadista inicia&#10;pre-registro en campo">
+      <outgoing>SFB_01</outgoing>
+    </startEvent>
+
+    <userTask id="Task_BrigIniciarSesion"
+              name="Iniciar sesion en herramienta&#10;para brigadistas"
+              camunda:assignee="brigadista">
+      <documentation>
+        El brigadista accede a brigadas.seguro.jalisco.gob.mx e
+        ingresa su nombre de usuario y contrasena. La pantalla
+        muestra la region sanitaria asignada y el nombre del usuario.
+      </documentation>
+      <incoming>SFB_01</incoming>
+      <outgoing>SFB_02</outgoing>
+    </userTask>
+
+    <userTask id="Task_BrigIngresarCURP"
+              name="Ingresar CURP del ciudadano&#10;en modulo Crear Pre-registro"
+              camunda:assignee="brigadista">
+      <documentation>
+        El brigadista accede al modulo Crear Pre-registro e ingresa
+        la CURP del ciudadano. Puede consultar la CURP si no la
+        tiene a la mano. RN-01.
+      </documentation>
+      <incoming>SFB_02</incoming>
+      <outgoing>SFB_03</outgoing>
+    </userTask>
+
+    <userTask id="Task_BrigConfirmarDatos"
+              name="Confirmar y completar datos&#10;personales del ciudadano"
+              camunda:assignee="brigadista">
+      <documentation>
+        El brigadista verifica y completa los datos personales del
+        ciudadano mostrados a partir de la CURP. Los campos opcionales
+        no son requeridos para continuar.
+      </documentation>
+      <incoming>SFB_03</incoming>
+      <outgoing>SFB_04</outgoing>
+    </userTask>
+
+    <userTask id="Task_BrigGuardarPreregistro"
+              name="Guardar pre-registro en&#10;region sanitaria del brigadista"
+              camunda:assignee="brigadista">
+      <documentation>
+        El brigadista confirma y guarda el pre-registro. Queda
+        almacenado en la region sanitaria asignada al brigadista
+        que realizo la inscripcion. El ciudadano debe completar
+        el registro en el portal usando flujo de recuperacion
+        de contrasena.
+      </documentation>
+      <incoming>SFB_04</incoming>
+      <outgoing>SFB_05</outgoing>
+      <outgoing>SF_BrigDerivaCiudadano</outgoing>
+    </userTask>
+
+    <userTask id="Task_BrigCerrarSesion"
+              name="Cerrar sesion en herramienta&#10;para brigadistas"
+              camunda:assignee="brigadista">
+      <documentation>
+        El brigadista cierra sesion al terminar. Se recomienda
+        siempre cerrar sesion si se trabaja en equipo compartido.
+      </documentation>
+      <incoming>SFB_05</incoming>
+      <outgoing>SFB_06</outgoing>
+    </userTask>
+
+    <endEvent id="End_BrigOK" name="Pre-registro guardado&#10;exitosamente">
+      <incoming>SFB_06</incoming>
+    </endEvent>
+
+
+    <!-- ═══════════════════════════════════════════════════
+         ████  LANE COORDINADOR REGIONAL  ████
+    ═══════════════════════════════════════════════════ -->
+
+    <startEvent id="Start_CoordRegional" name="Coordinador Regional&#10;accede al sistema">
+      <outgoing>SFCR_01</outgoing>
+    </startEvent>
+
+    <userTask id="Task_CRIniciarSesion"
+              name="Iniciar sesion en herramienta&#10;para brigadistas"
+              camunda:assignee="coordinadorRegional">
+      <documentation>
+        El Coordinador Regional accede con sus credenciales.
+        Tiene acceso a todos los modulos pero restringido a su
+        region sanitaria. RN-06.
+      </documentation>
+      <incoming>SFCR_01</incoming>
+      <outgoing>SFCR_02</outgoing>
+    </userTask>
+
+    <exclusiveGateway id="GW_CRAcciones" name="Accion a realizar?">
+      <incoming>SFCR_02</incoming>
+      <outgoing>SFCR_03a</outgoing>
+      <outgoing>SFCR_03b</outgoing>
+      <outgoing>SFCR_03c</outgoing>
+      <outgoing>SFCR_03d</outgoing>
+    </exclusiveGateway>
+
+    <userTask id="Task_CRGestionarUsuarios"
+              name="Gestionar usuarios de&#10;su region (crear/editar brigadistas)"
+              camunda:assignee="coordinadorRegional">
+      <documentation>
+        Puede crear y editar brigadistas asignados unicamente a
+        su misma region sanitaria. NO puede modificar coordinadores
+        estatales ni usuarios de otras regiones. El campo username
+        no puede modificarse. RN-06, RN-08.
+      </documentation>
+      <incoming>SFCR_03a</incoming>
+      <outgoing>SFCR_04a</outgoing>
+    </userTask>
+
+    <userTask id="Task_CRAdminRegistros"
+              name="Administrar pre-registros&#10;de su region sanitaria"
+              camunda:assignee="coordinadorRegional">
+      <documentation>
+        Ve y puede aprobar los pre-registros asignados exclusivamente
+        a su region sanitaria. No puede ver registros de otras
+        regiones. RN-06.
+      </documentation>
+      <incoming>SFCR_03b</incoming>
+      <outgoing>SFCR_04b</outgoing>
+    </userTask>
+
+    <userTask id="Task_CREditarPreregistro"
+              name="Editar datos de un&#10;pre-registro de su region"
+              camunda:assignee="coordinadorRegional">
+      <documentation>
+        Edita campos no identificadores de pre-registros de su
+        region. Los campos que identifican el registro (como CURP)
+        no pueden modificarse. RN-06.
+      </documentation>
+      <incoming>SFCR_03c</incoming>
+      <outgoing>SFCR_04c</outgoing>
+    </userTask>
+
+    <userTask id="Task_CRCambiarRegion"
+              name="Cambiar region sanitaria&#10;de un usuario de su region"
+              camunda:assignee="coordinadorRegional">
+      <documentation>
+        Puede actualizar la region sanitaria de brigadistas de su
+        propia region. Accion que puede realizarse cuantas veces
+        sea necesario. RN-10.
+      </documentation>
+      <incoming>SFCR_03d</incoming>
+      <outgoing>SFCR_04d</outgoing>
+    </userTask>
+
+    <userTask id="Task_CRCerrarSesion"
+              name="Cerrar sesion"
+              camunda:assignee="coordinadorRegional">
+      <incoming>SFCR_04a</incoming>
+      <incoming>SFCR_04b</incoming>
+      <incoming>SFCR_04c</incoming>
+      <incoming>SFCR_04d</incoming>
+      <outgoing>SFCR_05</outgoing>
+    </userTask>
+
+    <endEvent id="End_CoordRegionalOK" name="Gestion regional&#10;completada">
+      <incoming>SFCR_05</incoming>
+    </endEvent>
+
+
+    <!-- ═══════════════════════════════════════════════════
+         ████  LANE COORDINADOR ESTATAL  ████
+    ═══════════════════════════════════════════════════ -->
+
+    <startEvent id="Start_CoordEstatal" name="Coordinador Estatal&#10;accede al sistema">
+      <outgoing>SFCE_01</outgoing>
+    </startEvent>
+
+    <userTask id="Task_CEIniciarSesion"
+              name="Iniciar sesion en herramienta&#10;para brigadistas"
+              camunda:assignee="coordinadorEstatal">
+      <documentation>
+        El Coordinador Estatal tiene acceso total sin restriccion
+        de region. Puede ver y modificar todo en la plataforma.
+      </documentation>
+      <incoming>SFCE_01</incoming>
+      <outgoing>SFCE_02</outgoing>
+    </userTask>
+
+    <exclusiveGateway id="GW_CEAcciones" name="Accion a realizar?">
+      <incoming>SFCE_02</incoming>
+      <outgoing>SFCE_03a</outgoing>
+      <outgoing>SFCE_03b</outgoing>
+      <outgoing>SFCE_03c</outgoing>
+    </exclusiveGateway>
+
+    <userTask id="Task_CEGestionarUsuarios"
+              name="Gestionar TODOS los usuarios&#10;de la plataforma (todas regiones)"
+              camunda:assignee="coordinadorEstatal">
+      <documentation>
+        Puede crear y editar coordinadores regionales y brigadistas
+        de cualquier region sanitaria, sin restriccion geografica.
+        El campo username no puede modificarse una vez creado. RN-08.
+      </documentation>
+      <incoming>SFCE_03a</incoming>
+      <outgoing>SFCE_04a</outgoing>
+    </userTask>
+
+    <userTask id="Task_CEAdminTodosRegistros"
+              name="Administrar TODOS los&#10;pre-registros del sistema"
+              camunda:assignee="coordinadorEstatal">
+      <documentation>
+        Tiene acceso completo a todos los pre-registros del sistema
+        independientemente de la region sanitaria. Puede ver,
+        aprobar y editar cualquier registro.
+      </documentation>
+      <incoming>SFCE_03b</incoming>
+      <outgoing>SFCE_04b</outgoing>
+    </userTask>
+
+    <userTask id="Task_CEAsignarRegion"
+              name="Asignar / cambiar region&#10;sanitaria a cualquier usuario"
+              camunda:assignee="coordinadorEstatal">
+      <documentation>
+        Puede cambiar la region sanitaria de cualquier usuario de
+        la plataforma (coordinadores regionales o brigadistas) sin
+        restriccion. Accion repetible cuantas veces sea necesario.
+        RN-10.
+      </documentation>
+      <incoming>SFCE_03c</incoming>
+      <outgoing>SFCE_04c</outgoing>
+    </userTask>
+
+    <userTask id="Task_CECerrarSesion"
+              name="Cerrar sesion"
+              camunda:assignee="coordinadorEstatal">
+      <incoming>SFCE_04a</incoming>
+      <incoming>SFCE_04b</incoming>
+      <incoming>SFCE_04c</incoming>
+      <outgoing>SFCE_05</outgoing>
+    </userTask>
+
+    <endEvent id="End_CoordEstatalOK" name="Gestion estatal&#10;completada">
+      <incoming>SFCE_05</incoming>
+    </endEvent>
+
+
+    <!-- ═══════════════════════════════════════════════════
+         SEQUENCE FLOWS — FLUJO CIUDADANO
+    ═══════════════════════════════════════════════════ -->
+    <sequenceFlow id="SF_01" sourceRef="Start_Ciudadano"     targetRef="Task_IngresarCURP"/>
+    <sequenceFlow id="SF_02" sourceRef="Task_IngresarCURP"   targetRef="Task_ValidarCURP"/>
+    <sequenceFlow id="SF_03" sourceRef="Task_ValidarCURP"    targetRef="GW_CURPValida"/>
+
+    <sequenceFlow id="SF_04_OK"  name="Si — CURP valida y libre"
+                  sourceRef="GW_CURPValida" targetRef="Task_ConfirmarDatos">
+      <conditionExpression xsi:type="tFormalExpression">${curpValida == true}</conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="SF_04_ERR" name="No — CURP invalida o registrada"
+                  sourceRef="GW_CURPValida" targetRef="End_ErrorCURP">
+      <conditionExpression xsi:type="tFormalExpression">${curpValida == false}</conditionExpression>
+    </sequenceFlow>
+
+    <sequenceFlow id="SF_05"     sourceRef="Task_ConfirmarDatos"      targetRef="Task_AceptarPrivacidad"/>
+    <sequenceFlow id="SF_06"     sourceRef="Task_AceptarPrivacidad"   targetRef="Task_EnviarEmail"/>
+    <sequenceFlow id="SF_07"     sourceRef="Task_EnviarEmail"         targetRef="Timer_EsperaEmail"/>
+    <sequenceFlow id="SF_08"     sourceRef="Timer_EsperaEmail"        targetRef="Task_IngresarCodigo"/>
+    <sequenceFlow id="SF_09"     sourceRef="Task_IngresarCodigo"      targetRef="Task_ValidarCodigo"/>
+    <sequenceFlow id="SF_10"     sourceRef="Task_ValidarCodigo"       targetRef="GW_CodigoValido"/>
+
+    <sequenceFlow id="SF_11_OK"      name="Si — codigo correcto"
+                  sourceRef="GW_CodigoValido" targetRef="Task_CrearContrasena">
+      <conditionExpression xsi:type="tFormalExpression">${codigoValido == true}</conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="SF_11_Reenviar" name="No — reenviar codigo"
+                  sourceRef="GW_CodigoValido" targetRef="Task_EnviarEmail">
+      <conditionExpression xsi:type="tFormalExpression">${codigoValido == false}</conditionExpression>
+    </sequenceFlow>
+
+    <sequenceFlow id="SF_12"     sourceRef="Task_CrearContrasena"     targetRef="Task_IniciarSesion"/>
+    <sequenceFlow id="SF_13"     sourceRef="Task_IniciarSesion"       targetRef="Task_ActualizarContacto"/>
+    <sequenceFlow id="SF_14"     sourceRef="Task_ActualizarContacto"  targetRef="Task_CapturarINE"/>
+    <sequenceFlow id="SF_15"     sourceRef="Task_CapturarINE"         targetRef="Task_CapturarRostro"/>
+    <sequenceFlow id="SF_16"     sourceRef="Task_CapturarRostro"      targetRef="Task_ProcesarBiometria"/>
+    <sequenceFlow id="SF_17"     sourceRef="Task_ProcesarBiometria"   targetRef="GW_BiometriaOK"/>
+
+    <sequenceFlow id="SF_18_OK"  name="Si — biometria exitosa"
+                  sourceRef="GW_BiometriaOK" targetRef="Task_GenerarCredencial">
+      <conditionExpression xsi:type="tFormalExpression">${biometriaOK == true}</conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="SF_18_ERR" name="No — biometria fallida"
+                  sourceRef="GW_BiometriaOK" targetRef="End_ErrorBiometria">
+      <conditionExpression xsi:type="tFormalExpression">${biometriaOK == false}</conditionExpression>
+    </sequenceFlow>
+
+    <sequenceFlow id="SF_19"     sourceRef="Task_GenerarCredencial"   targetRef="Task_DescargarCredencial"/>
+    <sequenceFlow id="SF_20"     sourceRef="Task_DescargarCredencial" targetRef="GW_MasDependientes"/>
+
+    <sequenceFlow id="SF_21_SI"  name="Si — agregar dependiente"
+                  sourceRef="GW_MasDependientes" targetRef="Task_IngresarCURPDependiente">
+      <conditionExpression xsi:type="tFormalExpression">${agregarDependiente == true}</conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="SF_21_NO"  name="No — finalizar"
+                  sourceRef="GW_MasDependientes" targetRef="Task_CerrarSesionCiudadano">
+      <conditionExpression xsi:type="tFormalExpression">${agregarDependiente == false}</conditionExpression>
+    </sequenceFlow>
+
+    <sequenceFlow id="SF_22"     sourceRef="Task_IngresarCURPDependiente" targetRef="Task_ValidarCURPDep"/>
+    <sequenceFlow id="SF_23"     sourceRef="Task_ValidarCURPDep"          targetRef="GW_CURPDepValida"/>
+
+    <sequenceFlow id="SF_24_OK"      name="Si — CURP dependiente valida"
+                  sourceRef="GW_CURPDepValida" targetRef="Task_ConfirmarDatosDependiente">
+      <conditionExpression xsi:type="tFormalExpression">${curpDepValida == true}</conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="SF_24_ERR_Loop" name="No — reingresar CURP dependiente"
+                  sourceRef="GW_CURPDepValida" targetRef="Task_IngresarCURPDependiente">
+      <conditionExpression xsi:type="tFormalExpression">${curpDepValida == false}</conditionExpression>
+    </sequenceFlow>
+
+    <sequenceFlow id="SF_25"     sourceRef="Task_ConfirmarDatosDependiente" targetRef="Task_GenerarCredencialDep"/>
+    <sequenceFlow id="SF_DepLoop" sourceRef="Task_GenerarCredencialDep"     targetRef="GW_MasDependientes"/>
+    <sequenceFlow id="SF_26"     sourceRef="Task_CerrarSesionCiudadano"     targetRef="End_CredencialOK"/>
+
+    <!-- ═══════════════════════════════════════════════════
+         SEQUENCE FLOWS — FLUJO BRIGADISTA
+    ═══════════════════════════════════════════════════ -->
+    <sequenceFlow id="SFB_01" sourceRef="Start_Brigadista"            targetRef="Task_BrigIniciarSesion"/>
+    <sequenceFlow id="SFB_02" sourceRef="Task_BrigIniciarSesion"      targetRef="Task_BrigIngresarCURP"/>
+    <sequenceFlow id="SFB_03" sourceRef="Task_BrigIngresarCURP"       targetRef="Task_BrigConfirmarDatos"/>
+    <sequenceFlow id="SFB_04" sourceRef="Task_BrigConfirmarDatos"     targetRef="Task_BrigGuardarPreregistro"/>
+    <sequenceFlow id="SFB_05" sourceRef="Task_BrigGuardarPreregistro" targetRef="Task_BrigCerrarSesion"/>
+    <sequenceFlow id="SFB_06" sourceRef="Task_BrigCerrarSesion"       targetRef="End_BrigOK"/>
+
+    <!-- Flujo inter-lane: Brigadista deriva al ciudadano al portal -->
+    <sequenceFlow id="SF_BrigDerivaCiudadano"
+                  name="Ciudadano completa registro&#10;en portal (rec. contrasena)"
+                  sourceRef="Task_BrigGuardarPreregistro"
+                  targetRef="Task_IniciarSesion"/>
+
+    <!-- ═══════════════════════════════════════════════════
+         SEQUENCE FLOWS — COORDINADOR REGIONAL
+    ═══════════════════════════════════════════════════ -->
+    <sequenceFlow id="SFCR_01"  sourceRef="Start_CoordRegional"      targetRef="Task_CRIniciarSesion"/>
+    <sequenceFlow id="SFCR_02"  sourceRef="Task_CRIniciarSesion"     targetRef="GW_CRAcciones"/>
+    <sequenceFlow id="SFCR_03a" name="Gestionar usuarios"   sourceRef="GW_CRAcciones" targetRef="Task_CRGestionarUsuarios"/>
+    <sequenceFlow id="SFCR_03b" name="Administrar registros" sourceRef="GW_CRAcciones" targetRef="Task_CRAdminRegistros"/>
+    <sequenceFlow id="SFCR_03c" name="Editar pre-registro"  sourceRef="GW_CRAcciones" targetRef="Task_CREditarPreregistro"/>
+    <sequenceFlow id="SFCR_03d" name="Cambiar region"       sourceRef="GW_CRAcciones" targetRef="Task_CRCambiarRegion"/>
+    <sequenceFlow id="SFCR_04a" sourceRef="Task_CRGestionarUsuarios" targetRef="Task_CRCerrarSesion"/>
+    <sequenceFlow id="SFCR_04b" sourceRef="Task_CRAdminRegistros"    targetRef="Task_CRCerrarSesion"/>
+    <sequenceFlow id="SFCR_04c" sourceRef="Task_CREditarPreregistro" targetRef="Task_CRCerrarSesion"/>
+    <sequenceFlow id="SFCR_04d" sourceRef="Task_CRCambiarRegion"     targetRef="Task_CRCerrarSesion"/>
+    <sequenceFlow id="SFCR_05"  sourceRef="Task_CRCerrarSesion"      targetRef="End_CoordRegionalOK"/>
+
+    <!-- ═══════════════════════════════════════════════════
+         SEQUENCE FLOWS — COORDINADOR ESTATAL
+    ═══════════════════════════════════════════════════ -->
+    <sequenceFlow id="SFCE_01"  sourceRef="Start_CoordEstatal"        targetRef="Task_CEIniciarSesion"/>
+    <sequenceFlow id="SFCE_02"  sourceRef="Task_CEIniciarSesion"      targetRef="GW_CEAcciones"/>
+    <sequenceFlow id="SFCE_03a" name="Gestionar usuarios"    sourceRef="GW_CEAcciones" targetRef="Task_CEGestionarUsuarios"/>
+    <sequenceFlow id="SFCE_03b" name="Admin todos registros" sourceRef="GW_CEAcciones" targetRef="Task_CEAdminTodosRegistros"/>
+    <sequenceFlow id="SFCE_03c" name="Asignar region"        sourceRef="GW_CEAcciones" targetRef="Task_CEAsignarRegion"/>
+    <sequenceFlow id="SFCE_04a" sourceRef="Task_CEGestionarUsuarios"   targetRef="Task_CECerrarSesion"/>
+    <sequenceFlow id="SFCE_04b" sourceRef="Task_CEAdminTodosRegistros" targetRef="Task_CECerrarSesion"/>
+    <sequenceFlow id="SFCE_04c" sourceRef="Task_CEAsignarRegion"       targetRef="Task_CECerrarSesion"/>
+    <sequenceFlow id="SFCE_05"  sourceRef="Task_CECerrarSesion"        targetRef="End_CoordEstatalOK"/>
+
+  </process><!-- end process -->
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       BPMNDI — DIAGRAM INTERCHANGE (coordenadas visuales)
+  ═══════════════════════════════════════════════════════════════════ -->
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collab_Credencializacion">
+
+      <!-- ───── POOL ───── -->
+      <bpmndi:BPMNShape id="Shape_Pool" bpmnElement="Pool_Credencializacion"
+                        isHorizontal="true">
+        <dc:Bounds x="10" y="10" width="2880" height="1000"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="10" y="10" width="30" height="1000"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- ───── LANES ───── -->
+      <bpmndi:BPMNShape id="Shape_Lane_Ciudadano" bpmnElement="Lane_Ciudadano" isHorizontal="true">
+        <dc:Bounds x="40" y="10" width="2850" height="230"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Lane_Sistema" bpmnElement="Lane_Sistema" isHorizontal="true">
+        <dc:Bounds x="40" y="240" width="2850" height="200"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Lane_Brigadista" bpmnElement="Lane_Brigadista" isHorizontal="true">
+        <dc:Bounds x="40" y="440" width="2850" height="170"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Lane_CoordRegional" bpmnElement="Lane_CoordRegional" isHorizontal="true">
+        <dc:Bounds x="40" y="610" width="2850" height="190"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Lane_CoordEstatal" bpmnElement="Lane_CoordEstatal" isHorizontal="true">
+        <dc:Bounds x="40" y="800" width="2850" height="210"/>
+      </bpmndi:BPMNShape>
+
+      <!-- ═══════ LANE CIUDADANO — SHAPES ═══════ -->
+      <bpmndi:BPMNShape id="Shape_Start_Ciudadano" bpmnElement="Start_Ciudadano">
+        <dc:Bounds x="82" y="107" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="58" y="150" width="90" height="27"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Shape_Task_IngresarCURP" bpmnElement="Task_IngresarCURP">
+        <dc:Bounds x="160" y="85" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_ConfirmarDatos" bpmnElement="Task_ConfirmarDatos">
+        <dc:Bounds x="440" y="85" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_AceptarPrivacidad" bpmnElement="Task_AceptarPrivacidad">
+        <dc:Bounds x="600" y="85" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_IngresarCodigo" bpmnElement="Task_IngresarCodigo">
+        <dc:Bounds x="880" y="85" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_CrearContrasena" bpmnElement="Task_CrearContrasena">
+        <dc:Bounds x="1060" y="85" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_IniciarSesion" bpmnElement="Task_IniciarSesion">
+        <dc:Bounds x="1230" y="85" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_ActualizarContacto" bpmnElement="Task_ActualizarContacto">
+        <dc:Bounds x="1400" y="85" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_CapturarINE" bpmnElement="Task_CapturarINE">
+        <dc:Bounds x="1570" y="85" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_CapturarRostro" bpmnElement="Task_CapturarRostro">
+        <dc:Bounds x="1740" y="85" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_DescargarCredencial" bpmnElement="Task_DescargarCredencial">
+        <dc:Bounds x="2060" y="85" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_GW_MasDependientes" bpmnElement="GW_MasDependientes" isMarkerVisible="true">
+        <dc:Bounds x="2235" y="100" width="50" height="50"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="2200" y="157" width="120" height="27"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_IngresarCURPDep" bpmnElement="Task_IngresarCURPDependiente">
+        <dc:Bounds x="2340" y="85" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_ConfirmarDatosDep" bpmnElement="Task_ConfirmarDatosDependiente">
+        <dc:Bounds x="2600" y="85" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_CerrarSesionCiudadano" bpmnElement="Task_CerrarSesionCiudadano">
+        <dc:Bounds x="2700" y="85" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_End_CredencialOK" bpmnElement="End_CredencialOK">
+        <dc:Bounds x="2842" y="107" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="2820" y="150" width="90" height="27"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- ═══════ LANE SISTEMA — SHAPES ═══════ -->
+      <bpmndi:BPMNShape id="Shape_Task_ValidarCURP" bpmnElement="Task_ValidarCURP">
+        <dc:Bounds x="160" y="260" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_GW_CURPValida" bpmnElement="GW_CURPValida" isMarkerVisible="true">
+        <dc:Bounds x="335" y="275" width="50" height="50"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="300" y="332" width="120" height="27"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_End_ErrorCURP" bpmnElement="End_ErrorCURP">
+        <dc:Bounds x="337" y="395" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="310" y="438" width="90" height="27"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_EnviarEmail" bpmnElement="Task_EnviarEmail">
+        <dc:Bounds x="600" y="260" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Timer_EsperaEmail" bpmnElement="Timer_EsperaEmail">
+        <dc:Bounds x="782" y="282" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="755" y="325" width="90" height="27"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_ValidarCodigo" bpmnElement="Task_ValidarCodigo">
+        <dc:Bounds x="880" y="260" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_GW_CodigoValido" bpmnElement="GW_CodigoValido" isMarkerVisible="true">
+        <dc:Bounds x="1055" y="275" width="50" height="50"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="1020" y="332" width="120" height="27"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_ProcesarBiometria" bpmnElement="Task_ProcesarBiometria">
+        <dc:Bounds x="1740" y="260" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_GW_BiometriaOK" bpmnElement="GW_BiometriaOK" isMarkerVisible="true">
+        <dc:Bounds x="1920" y="275" width="50" height="50"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="1885" y="332" width="120" height="27"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_End_ErrorBiometria" bpmnElement="End_ErrorBiometria">
+        <dc:Bounds x="1922" y="395" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="1895" y="438" width="90" height="27"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_GenerarCredencial" bpmnElement="Task_GenerarCredencial">
+        <dc:Bounds x="2060" y="260" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_ValidarCURPDep" bpmnElement="Task_ValidarCURPDep">
+        <dc:Bounds x="2340" y="260" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_GW_CURPDepValida" bpmnElement="GW_CURPDepValida" isMarkerVisible="true">
+        <dc:Bounds x="2515" y="275" width="50" height="50"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="2480" y="332" width="120" height="27"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_GenerarCredencialDep" bpmnElement="Task_GenerarCredencialDep">
+        <dc:Bounds x="2600" y="260" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <!-- ═══════ LANE BRIGADISTA — SHAPES ═══════ -->
+      <bpmndi:BPMNShape id="Shape_Start_Brigadista" bpmnElement="Start_Brigadista">
+        <dc:Bounds x="82" y="507" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="58" y="550" width="90" height="27"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_BrigIniciarSesion" bpmnElement="Task_BrigIniciarSesion">
+        <dc:Bounds x="160" y="485" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_BrigIngresarCURP" bpmnElement="Task_BrigIngresarCURP">
+        <dc:Bounds x="330" y="485" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_BrigConfirmarDatos" bpmnElement="Task_BrigConfirmarDatos">
+        <dc:Bounds x="500" y="485" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_BrigGuardarPreregistro" bpmnElement="Task_BrigGuardarPreregistro">
+        <dc:Bounds x="670" y="485" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_BrigCerrarSesion" bpmnElement="Task_BrigCerrarSesion">
+        <dc:Bounds x="840" y="485" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_End_BrigOK" bpmnElement="End_BrigOK">
+        <dc:Bounds x="1012" y="507" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="988" y="550" width="90" height="27"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- ═══════ LANE COORD REGIONAL — SHAPES ═══════ -->
+      <bpmndi:BPMNShape id="Shape_Start_CoordRegional" bpmnElement="Start_CoordRegional">
+        <dc:Bounds x="82" y="690" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="58" y="733" width="90" height="27"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_CRIniciarSesion" bpmnElement="Task_CRIniciarSesion">
+        <dc:Bounds x="160" y="668" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_GW_CRAcciones" bpmnElement="GW_CRAcciones" isMarkerVisible="true">
+        <dc:Bounds x="335" y="683" width="50" height="50"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="300" y="740" width="120" height="27"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_CRGestionarUsuarios" bpmnElement="Task_CRGestionarUsuarios">
+        <dc:Bounds x="440" y="630" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_CRAdminRegistros" bpmnElement="Task_CRAdminRegistros">
+        <dc:Bounds x="440" y="668" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_CREditarPreregistro" bpmnElement="Task_CREditarPreregistro">
+        <dc:Bounds x="440" y="706" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_CRCambiarRegion" bpmnElement="Task_CRCambiarRegion">
+        <dc:Bounds x="440" y="744" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_CRCerrarSesion" bpmnElement="Task_CRCerrarSesion">
+        <dc:Bounds x="620" y="668" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_End_CoordRegionalOK" bpmnElement="End_CoordRegionalOK">
+        <dc:Bounds x="792" y="690" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="768" y="733" width="90" height="27"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- ═══════ LANE COORD ESTATAL — SHAPES ═══════ -->
+      <bpmndi:BPMNShape id="Shape_Start_CoordEstatal" bpmnElement="Start_CoordEstatal">
+        <dc:Bounds x="82" y="885" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="58" y="928" width="90" height="27"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_CEIniciarSesion" bpmnElement="Task_CEIniciarSesion">
+        <dc:Bounds x="160" y="863" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_GW_CEAcciones" bpmnElement="GW_CEAcciones" isMarkerVisible="true">
+        <dc:Bounds x="335" y="878" width="50" height="50"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="300" y="935" width="120" height="27"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_CEGestionarUsuarios" bpmnElement="Task_CEGestionarUsuarios">
+        <dc:Bounds x="440" y="840" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_CEAdminTodosRegistros" bpmnElement="Task_CEAdminTodosRegistros">
+        <dc:Bounds x="440" y="878" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_CEAsignarRegion" bpmnElement="Task_CEAsignarRegion">
+        <dc:Bounds x="440" y="916" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_CECerrarSesion" bpmnElement="Task_CECerrarSesion">
+        <dc:Bounds x="620" y="878" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_End_CoordEstatalOK" bpmnElement="End_CoordEstatalOK">
+        <dc:Bounds x="792" y="900" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="768" y="943" width="90" height="27"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- ═══════════════════════════════════════════════════
+           SEQUENCE FLOW EDGES — CIUDADANO
+      ═══════════════════════════════════════════════════ -->
+      <bpmndi:BPMNEdge id="Edge_SF_01" bpmnElement="SF_01">
+        <di:waypoint x="118" y="125"/><di:waypoint x="160" y="125"/>
+      </bpmndi:BPMNEdge>
+      <!-- CURP → ValidarCURP (down) -->
+      <bpmndi:BPMNEdge id="Edge_SF_02" bpmnElement="SF_02">
+        <di:waypoint x="220" y="165"/><di:waypoint x="220" y="260"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SF_03" bpmnElement="SF_03">
+        <di:waypoint x="280" y="300"/><di:waypoint x="335" y="300"/>
+      </bpmndi:BPMNEdge>
+      <!-- GW_CURP → ConfirmarDatos (up, OK) -->
+      <bpmndi:BPMNEdge id="Edge_SF_04_OK" bpmnElement="SF_04_OK">
+        <di:waypoint x="360" y="300"/><di:waypoint x="500" y="300"/><di:waypoint x="500" y="165"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="400" y="282" width="80" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <!-- GW_CURP → End Error CURP (down) -->
+      <bpmndi:BPMNEdge id="Edge_SF_04_ERR" bpmnElement="SF_04_ERR">
+        <di:waypoint x="355" y="325"/><di:waypoint x="355" y="395"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="358" y="355" width="80" height="27"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SF_05" bpmnElement="SF_05">
+        <di:waypoint x="560" y="125"/><di:waypoint x="600" y="125"/>
+      </bpmndi:BPMNEdge>
+      <!-- AceptarPrivacidad → EnviarEmail (down) -->
+      <bpmndi:BPMNEdge id="Edge_SF_06" bpmnElement="SF_06">
+        <di:waypoint x="660" y="165"/><di:waypoint x="660" y="260"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SF_07" bpmnElement="SF_07">
+        <di:waypoint x="720" y="300"/><di:waypoint x="782" y="300"/>
+      </bpmndi:BPMNEdge>
+      <!-- Timer → IngresarCodigo (up) -->
+      <bpmndi:BPMNEdge id="Edge_SF_08" bpmnElement="SF_08">
+        <di:waypoint x="818" y="300"/><di:waypoint x="940" y="300"/><di:waypoint x="940" y="165"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="850" y="282" width="80" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <!-- IngresarCodigo → ValidarCodigo (down) -->
+      <bpmndi:BPMNEdge id="Edge_SF_09" bpmnElement="SF_09">
+        <di:waypoint x="940" y="165"/><di:waypoint x="940" y="260"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SF_10" bpmnElement="SF_10">
+        <di:waypoint x="1000" y="300"/><di:waypoint x="1055" y="300"/>
+      </bpmndi:BPMNEdge>
+      <!-- GW_CODIGO → CrearContrasena (up, OK) -->
+      <bpmndi:BPMNEdge id="Edge_SF_11_OK" bpmnElement="SF_11_OK">
+        <di:waypoint x="1080" y="275"/><di:waypoint x="1080" y="200"/><di:waypoint x="1120" y="200"/><di:waypoint x="1120" y="165"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="1088" y="225" width="80" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <!-- GW_CODIGO → EnviarEmail (loop, reenviar) -->
+      <bpmndi:BPMNEdge id="Edge_SF_11_Reenviar" bpmnElement="SF_11_Reenviar">
+        <di:waypoint x="1080" y="325"/><di:waypoint x="1080" y="420"/><di:waypoint x="660" y="420"/><di:waypoint x="660" y="340"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="840" y="402" width="80" height="27"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SF_12" bpmnElement="SF_12">
+        <di:waypoint x="1180" y="125"/><di:waypoint x="1230" y="125"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SF_13" bpmnElement="SF_13">
+        <di:waypoint x="1350" y="125"/><di:waypoint x="1400" y="125"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SF_14" bpmnElement="SF_14">
+        <di:waypoint x="1520" y="125"/><di:waypoint x="1570" y="125"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SF_15" bpmnElement="SF_15">
+        <di:waypoint x="1690" y="125"/><di:waypoint x="1740" y="125"/>
+      </bpmndi:BPMNEdge>
+      <!-- CapturarRostro → ProcesarBiometria (down) -->
+      <bpmndi:BPMNEdge id="Edge_SF_16" bpmnElement="SF_16">
+        <di:waypoint x="1800" y="165"/><di:waypoint x="1800" y="260"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SF_17" bpmnElement="SF_17">
+        <di:waypoint x="1860" y="300"/><di:waypoint x="1920" y="300"/>
+      </bpmndi:BPMNEdge>
+      <!-- GW_BIO → GenerarCredencial (up, OK) -->
+      <bpmndi:BPMNEdge id="Edge_SF_18_OK" bpmnElement="SF_18_OK">
+        <di:waypoint x="1945" y="275"/><di:waypoint x="1945" y="200"/><di:waypoint x="2120" y="200"/><di:waypoint x="2120" y="260"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="1980" y="225" width="80" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <!-- GW_BIO → End Error Bio (down) -->
+      <bpmndi:BPMNEdge id="Edge_SF_18_ERR" bpmnElement="SF_18_ERR">
+        <di:waypoint x="1945" y="325"/><di:waypoint x="1945" y="395"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="1950" y="355" width="80" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <!-- GenerarCredencial (sistema) → DescargarCredencial (ciudadano, up) -->
+      <bpmndi:BPMNEdge id="Edge_SF_19" bpmnElement="SF_19">
+        <di:waypoint x="2120" y="260"/><di:waypoint x="2120" y="165"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SF_20" bpmnElement="SF_20">
+        <di:waypoint x="2180" y="125"/><di:waypoint x="2235" y="125"/>
+      </bpmndi:BPMNEdge>
+      <!-- GW_DEP → IngresarCURPDep (SI) -->
+      <bpmndi:BPMNEdge id="Edge_SF_21_SI" bpmnElement="SF_21_SI">
+        <di:waypoint x="2285" y="125"/><di:waypoint x="2340" y="125"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="2292" y="107" width="30" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <!-- GW_DEP → CerrarSesion (NO) -->
+      <bpmndi:BPMNEdge id="Edge_SF_21_NO" bpmnElement="SF_21_NO">
+        <di:waypoint x="2260" y="150"/><di:waypoint x="2260" y="195"/><di:waypoint x="2750" y="195"/><di:waypoint x="2750" y="165"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="2476" y="177" width="20" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <!-- IngresarCURPDep → ValidarCURPDep (down) -->
+      <bpmndi:BPMNEdge id="Edge_SF_22" bpmnElement="SF_22">
+        <di:waypoint x="2400" y="165"/><di:waypoint x="2400" y="260"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SF_23" bpmnElement="SF_23">
+        <di:waypoint x="2460" y="300"/><di:waypoint x="2515" y="300"/>
+      </bpmndi:BPMNEdge>
+      <!-- GW_CURP_DEP → ConfirmarDatosDep (OK, up) -->
+      <bpmndi:BPMNEdge id="Edge_SF_24_OK" bpmnElement="SF_24_OK">
+        <di:waypoint x="2540" y="275"/><di:waypoint x="2540" y="200"/><di:waypoint x="2660" y="200"/><di:waypoint x="2660" y="165"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="2570" y="225" width="60" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <!-- GW_CURP_DEP → IngresarCURPDep (loop ERR) -->
+      <bpmndi:BPMNEdge id="Edge_SF_24_ERR_Loop" bpmnElement="SF_24_ERR_Loop">
+        <di:waypoint x="2540" y="325"/><di:waypoint x="2540" y="440"/><di:waypoint x="2400" y="440"/><di:waypoint x="2400" y="165"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="2440" y="422" width="80" height="27"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <!-- ConfirmarDatosDep → GenerarCredencialDep (down) -->
+      <bpmndi:BPMNEdge id="Edge_SF_25" bpmnElement="SF_25">
+        <di:waypoint x="2660" y="165"/><di:waypoint x="2660" y="260"/>
+      </bpmndi:BPMNEdge>
+      <!-- GenerarCredencialDep → GW_MasDependientes (loop) -->
+      <bpmndi:BPMNEdge id="Edge_SF_DepLoop" bpmnElement="SF_DepLoop">
+        <di:waypoint x="2660" y="260"/><di:waypoint x="2660" y="50"/><di:waypoint x="2260" y="50"/><di:waypoint x="2260" y="100"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="2400" y="32" width="120" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SF_26" bpmnElement="SF_26">
+        <di:waypoint x="2800" y="125"/><di:waypoint x="2842" y="125"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- ═══════ SEQUENCE FLOW EDGES — BRIGADISTA ═══════ -->
+      <bpmndi:BPMNEdge id="Edge_SFB_01" bpmnElement="SFB_01">
+        <di:waypoint x="118" y="525"/><di:waypoint x="160" y="525"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SFB_02" bpmnElement="SFB_02">
+        <di:waypoint x="280" y="525"/><di:waypoint x="330" y="525"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SFB_03" bpmnElement="SFB_03">
+        <di:waypoint x="450" y="525"/><di:waypoint x="500" y="525"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SFB_04" bpmnElement="SFB_04">
+        <di:waypoint x="620" y="525"/><di:waypoint x="670" y="525"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SFB_05" bpmnElement="SFB_05">
+        <di:waypoint x="790" y="525"/><di:waypoint x="840" y="525"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SFB_06" bpmnElement="SFB_06">
+        <di:waypoint x="960" y="525"/><di:waypoint x="1012" y="525"/>
+      </bpmndi:BPMNEdge>
+      <!-- Brigadista → IniciarSesion Ciudadano (inter-lane) -->
+      <bpmndi:BPMNEdge id="Edge_SF_BrigDerivaCiudadano" bpmnElement="SF_BrigDerivaCiudadano">
+        <di:waypoint x="730" y="485"/><di:waypoint x="730" y="60"/><di:waypoint x="1290" y="60"/><di:waypoint x="1290" y="85"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="900" y="42" width="160" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- ═══════ SEQUENCE FLOW EDGES — COORD REGIONAL ═══════ -->
+      <bpmndi:BPMNEdge id="Edge_SFCR_01" bpmnElement="SFCR_01">
+        <di:waypoint x="118" y="708"/><di:waypoint x="160" y="708"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SFCR_02" bpmnElement="SFCR_02">
+        <di:waypoint x="280" y="708"/><di:waypoint x="335" y="708"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SFCR_03a" bpmnElement="SFCR_03a">
+        <di:waypoint x="360" y="683"/><di:waypoint x="440" y="670"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="370" y="668" width="80" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SFCR_03b" bpmnElement="SFCR_03b">
+        <di:waypoint x="360" y="708"/><di:waypoint x="440" y="708"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="370" y="690" width="80" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SFCR_03c" bpmnElement="SFCR_03c">
+        <di:waypoint x="360" y="720"/><di:waypoint x="440" y="746"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="370" y="732" width="80" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SFCR_03d" bpmnElement="SFCR_03d">
+        <di:waypoint x="360" y="730"/><di:waypoint x="440" y="784"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="370" y="757" width="80" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SFCR_04a" bpmnElement="SFCR_04a">
+        <di:waypoint x="560" y="670"/><di:waypoint x="680" y="708"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SFCR_04b" bpmnElement="SFCR_04b">
+        <di:waypoint x="560" y="708"/><di:waypoint x="620" y="708"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SFCR_04c" bpmnElement="SFCR_04c">
+        <di:waypoint x="560" y="746"/><di:waypoint x="680" y="720"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SFCR_04d" bpmnElement="SFCR_04d">
+        <di:waypoint x="560" y="784"/><di:waypoint x="680" y="748"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SFCR_05" bpmnElement="SFCR_05">
+        <di:waypoint x="740" y="708"/><di:waypoint x="792" y="708"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- ═══════ SEQUENCE FLOW EDGES — COORD ESTATAL ═══════ -->
+      <bpmndi:BPMNEdge id="Edge_SFCE_01" bpmnElement="SFCE_01">
+        <di:waypoint x="118" y="903"/><di:waypoint x="160" y="903"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SFCE_02" bpmnElement="SFCE_02">
+        <di:waypoint x="280" y="903"/><di:waypoint x="335" y="903"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SFCE_03a" bpmnElement="SFCE_03a">
+        <di:waypoint x="360" y="878"/><di:waypoint x="440" y="880"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="370" y="862" width="80" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SFCE_03b" bpmnElement="SFCE_03b">
+        <di:waypoint x="360" y="903"/><di:waypoint x="440" y="918"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="370" y="900" width="80" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SFCE_03c" bpmnElement="SFCE_03c">
+        <di:waypoint x="360" y="920"/><di:waypoint x="440" y="956"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="370" y="938" width="80" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SFCE_04a" bpmnElement="SFCE_04a">
+        <di:waypoint x="560" y="880"/><di:waypoint x="680" y="903"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SFCE_04b" bpmnElement="SFCE_04b">
+        <di:waypoint x="560" y="918"/><di:waypoint x="620" y="918"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SFCE_04c" bpmnElement="SFCE_04c">
+        <di:waypoint x="560" y="956"/><di:waypoint x="680" y="930"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SFCE_05" bpmnElement="SFCE_05">
+        <di:waypoint x="740" y="918"/><di:waypoint x="792" y="918"/>
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</definitions>
